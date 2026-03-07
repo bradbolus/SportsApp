@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment variables (keep secrets out of git)
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+
+# Build output (if you add a build step later)
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Generated icons (you'll commit the real ones)
+# public/icons/*.svg

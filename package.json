@@ -1,6 +1,6 @@
 {
   "name": "matchday",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Sports broadcast schedule tracker for South African viewers",
   "main": "server.js",
   "scripts": {
@@ -12,6 +12,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "dotenv": "^16.3.1",
     "express": "^4.18.2"
   },
   "devDependencies": {

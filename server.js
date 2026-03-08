@@ -11,7 +11,7 @@ const https   = require('https');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-const TSDB_V2 = 'https://www.thesportsdb.com/api/v2/json';
+const TSDB_V1_FREE = 'https://www.thesportsdb.com/api/v1/json/123';
 const TSDB_V1 = 'https://www.thesportsdb.com/api/v1/json/3';
 
 // ─── CACHE (10 min) ───────────────────────────────────────────────
@@ -85,7 +85,7 @@ async function fetchTSDBTV(dateStr) {
   const hit = getCache(key);
   if (hit) return hit;
   try {
-    const url  = `${TSDB_V2}/filter/tv/day/${dateStr}`;
+    const url = `${TSDB_V1_FREE}/eventstv.php?d=${dateStr}`;
     console.log(`[TSDB] GET ${url}`);
     const data = await fetchJSON(url);
     const events = data?.event || data?.events || [];

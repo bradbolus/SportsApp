@@ -248,9 +248,19 @@ async function fetchCricket(dateStr) {
 
 // ─── SEASON HELPER ────────────────────────────────────────────────
 function getSeason(sport) {
-  const y = new Date().getFullYear();
-  // Football seasons that straddle years use "YYYY" for current year
-  return y;
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = now.getMonth() + 1; // 1-12
+  if (sport === 'Soccer') {
+    // European leagues run Aug-May, so Jan-Jul = previous year's season
+    return month >= 8 ? year : year - 1;
+  }
+  if (sport === 'Rugby') {
+    // URC/Currie Cup run roughly the same as football
+    return month >= 8 ? year : year - 1;
+  }
+  // F1, Cricket default to calendar year
+  return year;
 }
 
 // ─── MIDDLEWARE ───────────────────────────────────────────────────

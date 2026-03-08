@@ -127,6 +127,7 @@ async function fetchFootball(dateStr) {
         `/fixtures?date=${dateStr}&league=${league.id}&season=${getSeason('Soccer')}`
       );
       const fixtures = data?.response || [];
+      console.log(`[Football] league=${league.id} season=${getSeason("Soccer")} -> ${fixtures.length} fixtures errors=${JSON.stringify(data?.errors)}`);
       fixtures.forEach((f, i) => {
         const home = f.teams?.home?.name || '';
         const away = f.teams?.away?.name || '';
@@ -164,6 +165,7 @@ async function fetchRugby(dateStr) {
         `/games?date=${dateStr}&league=${league.id}&season=${getSeason('Rugby')}`
       );
       const games = data?.response || [];
+      console.log(`[Rugby] league=${league.id} season=${getSeason("Rugby")} -> ${games.length} games errors=${JSON.stringify(data?.errors)}`);
       games.forEach((g, i) => {
         const home = g.teams?.home?.name || '';
         const away = g.teams?.away?.name || '';

@@ -337,8 +337,21 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     apiKeySet: !!API_KEY,
+    apiKeyLength: API_KEY.length,
+    apiKeyPreview: API_KEY ? API_KEY.substring(0, 6) + '...' : 'NOT SET',
     cacheSize: cache.size
   });
+});
+
+// ─── GET /api/test-football ───────────────────────────────────────
+// Temporary: test one direct API call and return raw response
+app.get('/api/test-football', async (_req, res) => {
+  try {
+    const data = await fetchJSON(APIS.football, `/fixtures?date=2026-03-08&league=39&season=2025`);
+    res.json({ keyUsed: API_KEY ? API_KEY.substring(0,6)+'...' : 'NONE', raw: data });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
 });
 
 // ─── SPA FALLBACK ─────────────────────────────────────────────────

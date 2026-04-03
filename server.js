@@ -140,30 +140,54 @@ async function fetchGolf(dateStr) {
   const k = `golf_${dateStr}`; const hit = getCache(k); if (hit) return hit;
   try {
     const d = await bdl(`/pga/v1/tournaments?season=${dateStr.slice(0,4)}&per_page=100`);
-    const r = (d?.data || [])
-      .filter(t => {
-        const s = (t.start_date || '').slice(0,10);
-        const e = (t.end_date   || '').slice(0,10);
-        return s && e && dateStr >= s && dateStr <= e;
-      })
-      .map(t => ({
-        id: `golf_${t.id}`, sport: 'Golf',
-        title: t.name || 'PGA Tournament',
-        league: 'PGA Tour', venue: t.course || t.venue || t.location || 'TBC',
-        time: `${dateStr}T10:00:00Z`,
-        duration: 480,
-        broadcasters: getSABroadcasters('Golf', 'pga golf'),
-      }));
-    console.log(`[Golf] ${dateStr} -> ${r.length} active`); setCache(k, r); return r;
+    const all = d?.data || [];
+    // Only show tournaments actively running on this exact date
+    const active = all.filter(t => {
+      const s = (t.start_date || '').slice(0, 10);
+      const e = (t.end_date   || '').slice(0, 10);
+      return s && e && dateStr >= s && dateStr <= e;
+    });
+    console.log(`[Golf] ${dateStr} -> ${active.length} active (of ${all.length} total)`);
+    // Work out which round it is (Thu=R1, Fri=R2, Sat=R3, Sun=R4)
+    const roundMap = { 4: 'Round 1', 5: 'Round 2', 6: 'Round 3', 0: 'Round 4 (Final)' };
+    const dow = new Date(dateStr).getDay(); // 0=Sun,4=Thu,5=Fri,6=Sat
+    const round = roundMap[dow] || 'Round in Progress';
+    const r = active.map(t => ({
+      id: `golf_${t.id}`, sport: 'Golf',
+      title: `${t.name || 'PGA Tournament'} — ${round}`,
+      league: 'PGA Tour',
+      venue: t.course || t.venue || t.location || 'TBC',
+      // PGA rounds typically start ~13:00 SAST (11:00 UTC)
+      time: `${dateStr}T11:00:00Z`,
+      duration: 480,
+      broadcasters: getSABroadcasters('Golf', 'pga golf'),
+    }));
+    setCache(k, r); return r;
   } catch (e) { console.error('[Golf]', e.message); return []; }
 }
+
+// Soccer leagues we want to show (all others filtered out)
+const SOCCER_WHITELIST = [
+  'english premier league', 'premier league',
+  'uefa champions league', 'champions league',
+  'la liga', 'bundesliga', 'serie a', 'ligue 1',
+  'dstv premiership', 'south african premier',
+  'fa cup', 'europa league',
+  'mls', 'copa del rey',
+];
 
 async function fetchSoccer(dateStr) {
   const k = `soccer_${dateStr}`; const hit = getCache(k); if (hit) return hit;
   try {
     const d = await tsdb(`/api/v1/json/${TSDB_KEY}/eventsday.php?d=${dateStr}&s=Soccer`);
-    const r = (d?.events || []).map(e => tsdbEvent(e, 'Soccer', dateStr));
-    console.log(`[Soccer] TSDB ${dateStr} -> ${r.length}`); setCache(k, r); return r;
+    const all = d?.events || [];
+    const filtered = all.filter(e => {
+      const l = (e.strLeague || '').toLowerCase();
+      return SOCCER_WHITELIST.some(w => l.includes(w));
+    });
+    console.log(`[Soccer] TSDB ${dateStr} -> ${filtered.length} kept (of ${all.length} total)`);
+    const r = filtered.map(e => tsdbEvent(e, 'Soccer', dateStr));
+    setCache(k, r); return r;
   } catch (e) { console.error('[Soccer]', e.message); return []; }
 }
 

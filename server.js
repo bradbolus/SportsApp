@@ -269,6 +269,31 @@ app.get('/api/test', async (_req, res) => {
   res.json(out);
 });
 
+// ─── GET /api/debug-golf ──────────────────────────────────────────
+app.get('/api/debug-golf', async (_req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const d = await bdl(`/pga/v1/tournaments?season=${today.slice(0,4)}&per_page=10`);
+    const tournaments = d?.data || [];
+    // Show first 5 with their date fields so we can see the structure
+    const preview = tournaments.slice(0, 5).map(t => ({
+      id: t.id,
+      name: t.name,
+      start_date: t.start_date,
+      end_date: t.end_date,
+      all_keys: Object.keys(t),
+    }));
+    const active = tournaments.filter(t => {
+      const s = (t.start_date || '').slice(0, 10);
+      const e = (t.end_date   || '').slice(0, 10);
+      return s && e && today >= s && today <= e;
+    });
+    res.json({ today, total: tournaments.length, active_count: active.length, active_names: active.map(t => t.name), preview });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 app.listen(PORT, () => {

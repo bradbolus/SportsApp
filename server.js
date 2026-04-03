@@ -141,27 +141,32 @@ async function fetchGolf(dateStr) {
   try {
     const d = await bdl(`/pga/v1/tournaments?season=${dateStr.slice(0,4)}&per_page=100`);
     const all = d?.data || [];
-    // Only show tournaments actively running on this exact date
+    // end_date is a string like "Jan 15 - 18" so we can't compare it directly.
+    // Instead: a PGA tournament runs Thu-Sun (4 days). Check if start_date
+    // falls within the 3 days before dateStr (i.e. tournament started Thu and today is Fri/Sat/Sun)
+    const target = new Date(dateStr);
     const active = all.filter(t => {
-      const s = (t.start_date || '').slice(0, 10);
-      const e = (t.end_date   || '').slice(0, 10);
-      return s && e && dateStr >= s && dateStr <= e;
+      if (!t.start_date) return false;
+      const start = new Date(t.start_date);
+      const diffDays = Math.floor((target - start) / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 3; // Thu=0, Fri=1, Sat=2, Sun=3
     });
     console.log(`[Golf] ${dateStr} -> ${active.length} active (of ${all.length} total)`);
-    // Work out which round it is (Thu=R1, Fri=R2, Sat=R3, Sun=R4)
-    const roundMap = { 4: 'Round 1', 5: 'Round 2', 6: 'Round 3', 0: 'Round 4 (Final)' };
-    const dow = new Date(dateStr).getDay(); // 0=Sun,4=Thu,5=Fri,6=Sat
-    const round = roundMap[dow] || 'Round in Progress';
-    const r = active.map(t => ({
-      id: `golf_${t.id}`, sport: 'Golf',
-      title: `${t.name || 'PGA Tournament'} — ${round}`,
-      league: 'PGA Tour',
-      venue: t.course || t.venue || t.location || 'TBC',
-      // PGA rounds typically start ~13:00 SAST (11:00 UTC)
-      time: `${dateStr}T11:00:00Z`,
-      duration: 480,
-      broadcasters: getSABroadcasters('Golf', 'pga golf'),
-    }));
+    const roundMap = { 0: 'Round 1', 1: 'Round 2', 2: 'Round 3', 3: 'Round 4 (Final)' };
+    const r = active.map(t => {
+      const start = new Date(t.start_date);
+      const diffDays = Math.floor((target - start) / (1000 * 60 * 60 * 24));
+      const round = roundMap[diffDays] || 'Round in Progress';
+      return {
+        id: `golf_${t.id}`, sport: 'Golf',
+        title: `${t.name || 'PGA Tournament'} — ${round}`,
+        league: 'PGA Tour',
+        venue: t.course_name || t.course || t.city || 'TBC',
+        time: `${dateStr}T11:00:00Z`,
+        duration: 480,
+        broadcasters: getSABroadcasters('Golf', 'pga golf'),
+      };
+    });
     setCache(k, r); return r;
   } catch (e) { console.error('[Golf]', e.message); return []; }
 }

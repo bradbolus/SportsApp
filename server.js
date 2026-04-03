@@ -13,7 +13,7 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 const BDL_KEY  = process.env.BDL_KEY || '';
-const TSDB_KEY = '1';
+const TSDB_KEY = '123';
 
 const cache    = new Map();
 const CACHE_MS = 15 * 60 * 1000;
@@ -126,18 +126,13 @@ async function fetchNFL(dateStr) {
 async function fetchF1(dateStr) {
   const k = `f1_${dateStr}`; const hit = getCache(k); if (hit) return hit;
   try {
-    const d = await bdl(`/f1/v1/sessions?per_page=100&season=${dateStr.slice(0,4)}`);
-    const r = (d?.data || [])
-      .filter(s => (s.date_start || '').startsWith(dateStr))
-      .map(s => ({
-        id: `f1_${s.id}`, sport: 'F1',
-        title: `F1: ${s.session_name || s.type || 'Session'} — ${s.event_name || s.circuit_short_name || 'Grand Prix'}`,
-        league: 'Formula 1', venue: s.circuit_short_name || s.location || 'TBC',
-        time: s.date_start ? new Date(s.date_start).toISOString() : `${dateStr}T12:00:00Z`,
-        duration: (s.session_name || '').toLowerCase().includes('race') ? 120 : 60,
-        broadcasters: getSABroadcasters('F1', 'f1'),
-      }));
-    console.log(`[F1] ${dateStr} -> ${r.length}`); setCache(k, r); return r;
+    const d = await tsdb(`/api/v1/json/${TSDB_KEY}/eventsday.php?d=${dateStr}&s=Motorsport`);
+    const all = d?.events || [];
+    // Filter to F1 only
+    const events = all.filter(e => (e.strLeague || '').toLowerCase().includes('formula'));
+    console.log(`[F1] TSDB ${dateStr} -> ${events.length} (of ${all.length} motorsport)`);
+    const r = events.map(e => tsdbEvent(e, 'F1', dateStr));
+    setCache(k, r); return r;
   } catch (e) { console.error('[F1]', e.message); return []; }
 }
 
@@ -232,11 +227,11 @@ app.get('/api/test', async (_req, res) => {
   const tests = [
     ['nba',     () => bdl(`/v1/games?dates[]=${today}&per_page=3`)],
     ['nfl',     () => bdl(`/nfl/v1/games?dates[]=${today}&per_page=3`)],
-    ['f1',      () => bdl(`/f1/v1/sessions?per_page=3&season=${today.slice(0,4)}`)],
+    ['f1',      () => tsdb(`/api/v1/json/123/eventsday.php?d=${today}&s=Motorsport`)],
     ['golf',    () => bdl(`/pga/v1/tournaments?season=${today.slice(0,4)}&per_page=3`)],
-    ['soccer',  () => tsdb(`/api/v1/json/${TSDB_KEY}/eventsday.php?d=${today}&s=Soccer`)],
-    ['rugby',   () => tsdb(`/api/v1/json/${TSDB_KEY}/eventsday.php?d=${today}&s=Rugby`)],
-    ['cricket', () => tsdb(`/api/v1/json/${TSDB_KEY}/eventsday.php?d=${today}&s=Cricket`)],
+    ['soccer',  () => tsdb(`/api/v1/json/123/eventsday.php?d=${today}&s=Soccer`)],
+    ['rugby',   () => tsdb(`/api/v1/json/123/eventsday.php?d=${today}&s=Rugby`)],
+    ['cricket', () => tsdb(`/api/v1/json/123/eventsday.php?d=${today}&s=Cricket`)],
   ];
   for (const [name, fn] of tests) {
     try {
